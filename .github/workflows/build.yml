@@ -143,7 +143,7 @@ jobs:
         if: env.DOCKER_IMAGE_TAG == 'master'
 
       - name: Set Docker Hub repository to username
-        run: echo "DOCKER_REPOSITORY=dalay.mabboux@gmail.com" >> $GITHUB_ENV
+        run: echo "DOCKER_REPOSITORY=dalaymabboux" >> $GITHUB_ENV
 
       - name: Set image name
         run: echo "DOCKER_IMAGE_NAME=ocrmypdf" >> $GITHUB_ENV
