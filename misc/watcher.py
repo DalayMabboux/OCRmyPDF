@@ -43,8 +43,6 @@ def getenv_bool(name: str, default: str = 'False'):
 
 
 INPUT_DIRECTORY = os.getenv('OCR_INPUT_DIRECTORY', '/input')
-OUTPUT_DIRECTORY = os.getenv('OCR_OUTPUT_DIRECTORY', '/output')
-OUTPUT_DIRECTORY_YEAR_MONTH = getenv_bool('OCR_OUTPUT_DIRECTORY_YEAR_MONTH')
 ON_SUCCESS_DELETE = getenv_bool('OCR_ON_SUCCESS_DELETE')
 DESKEW = getenv_bool('OCR_DESKEW')
 OCR_JSON_SETTINGS = json.loads(os.getenv('OCR_JSON_SETTINGS', '{}'))
@@ -52,23 +50,13 @@ POLL_NEW_FILE_SECONDS = int(os.getenv('OCR_POLL_NEW_FILE_SECONDS', '1'))
 USE_POLLING = getenv_bool('OCR_USE_POLLING')
 LOGLEVEL = os.getenv('OCR_LOGLEVEL', 'INFO')
 PATTERNS = ['*.pdf', '*.PDF']
+OCR_LAYER_ADDED_SUFFIX = "_ocrd"
 
 log = logging.getLogger('ocrmypdf-watcher')
 
-
-def get_output_dir(root, basename):
-    if OUTPUT_DIRECTORY_YEAR_MONTH:
-        today = datetime.today()
-        output_directory_year_month = (
-            Path(root) / str(today.year) / f'{today.month:02d}'
-        )
-        if not output_directory_year_month.exists():
-            output_directory_year_month.mkdir(parents=True, exist_ok=True)
-        output_path = Path(output_directory_year_month) / basename
-    else:
-        output_path = Path(OUTPUT_DIRECTORY) / basename
-    return output_path
-
+def get_output_dir(file_path):
+    new_file_name = file_path.stem + OCR_LAYER_ADDED_SUFFIX + file_path.suffix
+    return (str(file_path.parent) + '/' + new_file_name)
 
 def wait_for_file_ready(file_path):
     # This loop waits to make sure that the file is completely loaded on
@@ -94,7 +82,7 @@ def wait_for_file_ready(file_path):
 
 def execute_ocrmypdf(file_path):
     file_path = Path(file_path)
-    output_path = get_output_dir(OUTPUT_DIRECTORY, file_path.name)
+    output_path = get_output_dir(file_path)
 
     log.info("-" * 20)
     log.info(f'New file: {file_path}. Waiting until fully loaded...')
@@ -117,7 +105,7 @@ def execute_ocrmypdf(file_path):
 
 class HandleObserverEvent(PatternMatchingEventHandler):
     def on_any_event(self, event):
-        if event.event_type in ['created']:
+        if event.event_type in ['created'] and not OCR_LAYER_ADDED_SUFFIX in event.src_path:
             execute_ocrmypdf(event.src_path)
 
 
@@ -134,13 +122,9 @@ def main():
     log.info(
         f"Starting OCRmyPDF watcher with config:\n"
         f"Input Directory: {INPUT_DIRECTORY}\n"
-        f"Output Directory: {OUTPUT_DIRECTORY}\n"
-        f"Output Directory Year & Month: {OUTPUT_DIRECTORY_YEAR_MONTH}"
     )
     log.debug(
         f"INPUT_DIRECTORY: {INPUT_DIRECTORY}\n"
-        f"OUTPUT_DIRECTORY: {OUTPUT_DIRECTORY}\n"
-        f"OUTPUT_DIRECTORY_YEAR_MONTH: {OUTPUT_DIRECTORY_YEAR_MONTH}\n"
         f"ON_SUCCESS_DELETE: {ON_SUCCESS_DELETE}\n"
         f"DESKEW: {DESKEW}\n"
         f"ARGS: {OCR_JSON_SETTINGS}\n"
